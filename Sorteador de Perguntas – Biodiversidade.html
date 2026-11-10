@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sorteador de Perguntas – Biodiversidade</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap">
+<style>
+:root{--bg:#e6eee3;--surface:#f6faf3;--ink:#12301d;--muted:#4c6654;--line:#b9cbb8;--accent:#f0b429;--on-accent:#2a1d00;--ok:#1f7a45;--ok-bg:#cfeedb;--bad:#b3402a;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1f15;--surface:#172a1d;--ink:#e8f2e5;--muted:#9bb5a1;--line:#2f4a37;--accent:#f0b429;--on-accent:#2a1d00;--ok:#6fd59a;--ok-bg:#1c4a2e;--bad:#ff8a70;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1f15;--surface:#172a1d;--ink:#e8f2e5;--muted:#9bb5a1;--line:#2f4a37;--accent:#f0b429;--on-accent:#2a1d00;--ok:#6fd59a;--ok-bg:#1c4a2e;--bad:#ff8a70;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.4}
+main{max-width:1000px;margin:0 auto;padding:20px 16px 40px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:16px}
+h1{font-size:clamp(1.3rem,3vw,1.8rem);margin:0;font-weight:800}
+.sub{color:var(--muted);font-size:.95rem}
+.bar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+button{font:inherit;cursor:pointer;border-radius:10px;border:2px solid var(--ink);background:var(--surface);color:var(--ink);padding:10px 16px;font-weight:600}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.45;cursor:not-allowed}
+.go{background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-size:1.25rem;font-weight:800;padding:14px 26px}
+.card{background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:clamp(16px,3vw,32px);min-height:260px}
+.num{display:inline-block;background:var(--ink);color:var(--bg);border-radius:8px;padding:2px 12px;font-weight:800;margin-bottom:12px}
+.q{font-size:clamp(1.3rem,3.2vw,2.1rem);font-weight:800;margin:0 0 20px;line-height:1.25}
+.opts{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.opt{display:flex;gap:12px;align-items:flex-start;border:2px solid var(--line);border-radius:12px;padding:12px 14px;font-size:clamp(1.05rem,2.4vw,1.5rem)}
+.opt b{min-width:1.6em;color:var(--muted)}
+.opt.right{border-color:var(--ok);background:var(--ok-bg)}
+.opt.right b{color:var(--ok)}
+.opt.dim{opacity:.55}
+.empty{color:var(--muted);font-size:1.2rem;margin:40px 0;text-align:center}
+.done{color:var(--bad)}
+details{margin-top:16px;background:var(--surface);border:2px solid var(--line);border-radius:12px;padding:10px 14px}
+summary{cursor:pointer;font-weight:600}
+.teams{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:12px}
+.team{border:2px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.team input{font:inherit;width:100%;text-align:center;border:0;border-bottom:2px solid var(--line);background:transparent;color:var(--ink);font-weight:600;padding:4px}
+.team .pts{font-size:2.4rem;font-weight:800;margin:6px 0}
+.team button{padding:4px 14px;font-size:1.2rem}
+.hist{color:var(--muted);font-size:.9rem;margin-top:12px;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Sorteador de Perguntas: Biodiversidade</h1>
+  <span class="sub" id="count"></span>
+</header>
+<div class="bar">
+  <button class="go" id="draw">Sortear pergunta</button>
+  <button id="reveal" disabled>Revelar resposta</button>
+  <button id="reset">Reiniciar sorteio</button>
+</div>
+<section class="card" id="card" aria-live="polite"><p class="empty">Aperte “Sortear pergunta” para começar.</p></section>
+<details>
+  <summary>Placar dos players (opcional)</summary>
+  <div class="teams" id="teams"></div>
+</details>
+<p class="hist" id="hist"></p>
+</main>
+<script>
+var Q=[
+["O que é biodiversidade?","A variedade de seres vivos existentes em um ambiente","A quantidade de prédios de uma cidade","A presença apenas de animais grandes","A ausência de plantas em uma região",0],
+["Qual alternativa apresenta um exemplo de ser vivo?","Pedra","Água","Cogumelo","Areia",2],
+["O que é um ecossistema?","Um conjunto de objetos sem relação","O conjunto dos seres vivos e dos elementos não vivos que interagem em um ambiente","Apenas os animais de uma floresta","Somente o solo de uma região",1],
+["Qual destes ambientes apresenta grande biodiversidade?","Um estacionamento","Uma sala vazia","Uma estrada asfaltada","Uma floresta tropical",3],
+["Qual é uma função das plantas nos ecossistemas?","Produzir alimento por meio da fotossíntese","Impedir a existência de animais","Eliminar toda a água do solo","Produzir luz durante a noite",0],
+["Qual atitude contribui para a preservação da biodiversidade?","Jogar lixo nos rios","Destruir áreas verdes","Proteger os habitats naturais","Caçar animais silvestres",2],
+["O que é habitat?","O alimento preferido de um animal","O lugar onde um ser vivo vive","O tamanho de uma espécie","O som produzido por um animal",1],
+["Qual destes animais é um polinizador?","Tubarão","Minhoca","Jacaré","Abelha",3],
+["O que pode acontecer quando o lixo é jogado em rios?","A água pode ser contaminada e os animais prejudicados","A água fica automaticamente potável","A biodiversidade sempre aumenta","Os peixes passam a respirar fora da água",0],
+["Qual é um exemplo de recurso natural?","Plástico","Celular","Água","Caderno",2],
+["Por que as árvores são importantes para muitos animais?","Porque impedem todos os sons","Porque podem oferecer alimento e abrigo","Porque substituem a água","Porque não permitem a reprodução",1],
+["O que é uma espécie ameaçada de extinção?","Uma espécie que vive somente em zoológicos","Uma espécie que acabou de nascer","Uma espécie que não precisa de habitat","Uma espécie que corre risco de desaparecer",3],
+["Qual destes hábitos reduz o desperdício de água?","Fechar a torneira enquanto escova os dentes","Deixar a torneira aberta sem necessidade","Lavar a calçada diariamente com mangueira","Descartar óleo na pia",0],
+["O que os animais herbívoros comem principalmente?","Rochas","Plástico","Plantas","Apenas outros animais",2],
+["Qual é o papel dos decompositores na natureza?","Impedir a formação do solo","Decompor restos de seres vivos e reciclar nutrientes","Produzir todos os alimentos","Eliminar a luz solar",1],
+["Qual ação pode prejudicar a biodiversidade?","Recuperar áreas degradadas","Criar áreas protegidas","Plantar espécies nativas","Desmatar florestas sem controle",3],
+["O que é uma cadeia alimentar?","A sequência de seres vivos em que um serve de alimento para outro","Uma lista de compras de supermercado","Um conjunto de animais da mesma cor","Uma disputa por território entre pessoas",0],
+["Por que devemos evitar comprar animais silvestres retirados ilegalmente da natureza?","Porque eles não precisam de alimento","Porque todos são perigosos","Porque o tráfico prejudica as populações naturais e os ecossistemas","Porque não existem animais silvestres no Brasil",2],
+["Qual alternativa apresenta uma fonte de poluição?","Plantio de árvores nativas","Descarte de produtos químicos em rios","Proteção de nascentes","Separação correta dos resíduos",1],
+["O que significa preservar a natureza?","Utilizar todos os recursos sem limites","Substituir florestas por construções","Capturar animais para vender","Proteger os ambientes e utilizar os recursos de forma responsável",3],
+["Uma floresta possui muitas espécies de plantas. Por que isso é importante para os animais?","Porque todas as plantas são venenosas","Porque podem oferecer diferentes alimentos e abrigos","Porque impedem a entrada da luz solar","Porque eliminam os predadores",1],
+["O que pode acontecer quando uma espécie invasora chega a um ambiente onde não existia naturalmente?","Pode competir com espécies nativas por alimento e espaço","Sempre melhora o ambiente","Desaparece imediatamente","Impede qualquer tipo de poluição",0],
+["Por que a retirada da vegetação pode aumentar a erosão do solo?","Porque aumenta a quantidade de raízes","Porque as árvores deixam o solo mais pesado","Porque o solo fica menos protegido contra chuva e vento","Porque diminui a ação da gravidade",2],
+["Qual é a relação entre biodiversidade e equilíbrio ecológico?","Quanto menos espécies, melhor sempre","A biodiversidade não interfere no ambiente","Somente os animais grandes mantêm o equilíbrio","As diferentes espécies desempenham funções importantes no ecossistema",3],
+["Por que a destruição de uma floresta pode afetar até animais que não vivem nas árvores?","Porque todos os animais precisam voar","Porque as mudanças podem afetar alimentos, água e relações ecológicas","Porque os animais deixam de respirar","Porque todos os animais vivem no mesmo lugar",1],
+["Qual é uma consequência possível do uso excessivo de agrotóxicos?","Contaminação do solo e da água e danos a organismos","Aumento garantido da biodiversidade","Desaparecimento de todas as doenças","Produção natural de água potável",0],
+["Por que os corredores ecológicos são importantes?","Servem para construir estradas","Impedem a circulação dos animais","Conectam áreas naturais e facilitam o deslocamento de espécies","Substituem todas as florestas",2],
+["O que significa dizer que duas espécies competem na natureza?","Que vivem sempre juntas e se ajudam","Que disputam recursos como alimento e espaço","Que pertencem à mesma família","Que possuem exatamente o mesmo tamanho",1],
+["Por que a diversidade genética é importante para uma espécie?","Porque faz todos os indivíduos ficarem iguais","Porque impede a reprodução","Porque elimina a necessidade de alimento","Porque pode aumentar a capacidade de adaptação a mudanças",3],
+["Uma região perdeu muitas árvores e passou a registrar temperaturas mais altas. Qual explicação faz sentido?","A vegetação ajuda a fornecer sombra e regular a temperatura","As árvores produzem calor durante a noite","O solo sem árvores sempre fica mais frio","As árvores impedem a existência de nuvens",0],
+["Qual é a principal função das áreas de proteção ambiental?","Permitir a retirada ilimitada de recursos","Substituir os rios por reservatórios","Proteger ambientes naturais e orientar seu uso sustentável","Impedir o nascimento de novas espécies",2],
+["Por que os decompositores são essenciais para os ecossistemas?","Porque produzem luz solar","Porque transformam matéria orgânica e devolvem nutrientes ao ambiente","Porque caçam todos os herbívoros","Porque impedem o crescimento das plantas",1],
+["O que pode acontecer quando um predador desaparece de uma região?","Todas as espécies desaparecem juntas","A vegetação deixa de crescer imediatamente","O clima muda no mesmo instante","Algumas populações de presas podem aumentar muito",3],
+["Qual prática agrícola pode ajudar a conservar o solo?","Manter cobertura vegetal e utilizar técnicas de conservação","Retirar toda a vegetação das margens dos rios","Queimar restos de vegetação sem controle","Deixar o solo descoberto por longos períodos",0],
+["Por que as matas ciliares ajudam a conservar os rios?","Porque impedem a formação de peixes","Porque aumentam o lixo nas margens","Porque ajudam a filtrar sedimentos e proteger as margens","Porque impedem a entrada de água da chuva",2],
+["O que é consumo sustentável?","Comprar tudo o que estiver disponível","Consumir de maneira responsável, evitando desperdícios","Descartar produtos ainda utilizáveis","Utilizar recursos naturais sem limites",1],
+["Uma espécie de planta desaparece de uma região. Qual consequência pode ocorrer?","Nenhum outro ser vivo será afetado","Todos os animais se tornam herbívoros","A quantidade de água dobra","Animais que dependiam dela podem perder uma fonte de alimento ou abrigo",3],
+["Por que a fragmentação de florestas é um problema?","Pode isolar populações de animais e dificultar sua reprodução","Aumenta sempre o espaço disponível para os animais","Cria novos rios naturalmente","Elimina a necessidade de corredores ecológicos",0],
+["Qual atitude ajuda a proteger a fauna silvestre?","Comprar animais retirados ilegalmente da natureza","Alimentar qualquer animal selvagem com comida humana","Não comprar animais silvestres de origem ilegal","Retirar filhotes da floresta para criar em casa",2],
+["Como o descarte incorreto de pilhas e baterias pode prejudicar o ambiente?","Produz mais oxigênio","Pode liberar substâncias contaminantes no solo e na água","Melhora a fertilidade de todos os solos","Ajuda os peixes a se reproduzirem",1],
+["Por que a variedade de polinizadores é importante?","Porque todos produzem mel","Porque substituem a luz solar","Porque impedem a formação de frutos","Porque diferentes animais podem polinizar diferentes plantas",3],
+["Uma comunidade planta árvores nativas em uma área degradada. Qual resultado pode surgir com o tempo?","Recuperação de habitats e retorno de algumas espécies","Desaparecimento de todos os insetos","Aumento imediato da poluição","Transformação da floresta em deserto",0],
+["O que pode ocorrer quando há excesso de fertilizantes chegando a um lago?","A água fica sempre mais limpa","Os peixes recebem alimento ilimitado sem riscos","Pode ocorrer proliferação de algas e redução do oxigênio da água","O lago se transforma em água potável",2],
+["Por que é importante proteger espécies que parecem não ter utilidade para os seres humanos?","Porque somente essas espécies precisam de proteção","Porque todas fazem parte das relações ecológicas e podem ter funções importantes","Porque não dependem do ambiente","Porque não interagem com outros seres vivos",1],
+["O que diferencia uma espécie nativa de uma espécie exótica?","A nativa é sempre maior","A exótica nunca consegue sobreviver","A nativa vive somente em zoológicos","A nativa ocorre naturalmente naquela região; a exótica foi introduzida de outra região",3],
+["Qual é um possível efeito das queimadas sobre os animais?","Morte de indivíduos e perda de habitat","Aumento imediato de todos os alimentos","Melhoria garantida da qualidade do ar","Criação de novos habitats seguros para todas as espécies",0],
+["Por que a preservação das florestas também ajuda a proteger o clima?","Porque as florestas impedem todos os ventos","Porque as árvores eliminam o gás carbônico do planeta","Porque a vegetação participa do armazenamento de carbono e da regulação do ambiente","Porque as florestas produzem combustíveis fósseis",2],
+["Uma espécie possui poucos indivíduos vivendo em uma região. Por que ela pode estar mais vulnerável?","Porque não precisa se reproduzir","Porque acontecimentos que afetem poucos indivíduos podem ameaçar toda a população","Porque sempre consegue se adaptar rapidamente","Porque não possui predadores",1],
+["Qual é a relação entre biodiversidade e alimentação humana?","A biodiversidade não tem relação com alimentos","Somente os animais domésticos fornecem alimentos","A agricultura depende exclusivamente de máquinas","Muitas espécies fornecem alimentos e ajudam processos como a polinização",3],
+["Uma cidade pretende construir em uma área de vegetação nativa. O que deveria ser considerado antes?","Os impactos sobre os habitats, as espécies e os recursos naturais","Somente a quantidade de prédios que cabem no terreno","Apenas a cor das construções","Somente o custo da pintura dos prédios",0]
+];
+var L="ABCD",used=[],cur=null,shown=false,KEY="sorteador-bio-usadas";
+var $=function(i){return document.getElementById(i)};
+try{var s=JSON.parse(localStorage.getItem(KEY)||"[]");if(Array.isArray(s))used=s.filter(function(n){return n>=0&&n<Q.length})}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(used))}catch(e){}}
+function esc(t){return t.replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+function status(){
+  $("count").textContent=(Q.length-used.length)+" de "+Q.length+" perguntas restantes";
+  $("hist").textContent=used.length?"Já sorteadas: "+used.map(function(n){return n+1}).join(", "):"";
+  $("draw").disabled=used.length>=Q.length;
+}
+function render(){
+  var c=$("card");
+  if(cur===null){
+    c.innerHTML=used.length>=Q.length?'<p class="empty done">Todas as perguntas já foram sorteadas. Use “Reiniciar sorteio”.</p>':'<p class="empty">Aperte “Sortear pergunta” para começar.</p>';
+    $("reveal").disabled=true;return;
+  }
+  var q=Q[cur],h='<span class="num">Pergunta '+(cur+1)+'</span><p class="q">'+esc(q[0])+'</p><ul class="opts">';
+  for(var i=0;i<4;i++){
+    var k=shown?(i===q[5]?" right":" dim"):"";
+    h+='<li class="opt'+k+'"><b>'+L[i]+')</b><span>'+esc(q[i+1])+'</span></li>';
+  }
+  c.innerHTML=h+"</ul>";
+  $("reveal").disabled=shown;
+}
+$("draw").onclick=function(){
+  var left=[];for(var i=0;i<Q.length;i++)if(used.indexOf(i)<0)left.push(i);
+  if(!left.length)return;
+  cur=left[Math.floor(Math.random()*left.length)];
+  used.push(cur);shown=false;save();status();render();
+};
+$("reveal").onclick=function(){if(cur!==null){shown=true;render()}};
+var armed=false,armT=null;
+function disarm(){armed=false;clearTimeout(armT);$("reset").textContent="Reiniciar sorteio"}
+$("reset").onclick=function(){
+  if(used.length&&!armed){armed=true;$("reset").textContent="Clique de novo para confirmar";armT=setTimeout(disarm,4000);return}
+  disarm();used=[];cur=null;shown=false;save();status();render();
+};
+var T=["Player 1","Player 2","Player 3","Player 4"],P=[0,0,0,0];
+function teams(){
+  var h="";
+  for(var i=0;i<T.length;i++)h+='<div class="team"><input value="'+T[i]+'" aria-label="Nome do player '+(i+1)+'" data-n="'+i+'"><div class="pts" id="p'+i+'">'+P[i]+'</div><button data-d="-1" data-t="'+i+'" aria-label="Tirar ponto">−</button> <button data-d="1" data-t="'+i+'" aria-label="Dar ponto">+</button></div>';
+  $("teams").innerHTML=h;
+}
+$("teams").addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b)return;
+  var t=+b.dataset.t;P[t]+=+b.dataset.d;$("p"+t).textContent=P[t];
+});
+$("teams").addEventListener("input",function(e){if(e.target.dataset.n!==undefined)T[+e.target.dataset.n]=e.target.value});
+teams();status();render();
+</script>
+</body>
+</html>
